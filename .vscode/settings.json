@@ -9,5 +9,6 @@
     "bin/": true,
     ".classpath": true,
     ".project": true
-  }
+  },
+  "java.checkstyle.configuration": "/google_checks.xml"
 }

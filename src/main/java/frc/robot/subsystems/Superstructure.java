@@ -1,14 +1,20 @@
 package frc.robot.subsystems;
 
+import frc.robot.Ports;
+import frc.robot.lib.team254.geometry.Translation2d;
 import frc.robot.loops.ILooper;
 import frc.robot.loops.Loop;
+import frc.robot.subsystems.requests.EmptyRequest;
 import frc.robot.subsystems.requests.Request;
 import frc.robot.subsystems.requests.RequestList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.Relay;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.Relay.Value;
 
 /**
  * A class to handle subsystem requests and the robot as a whole. Should be in robot.java, but
@@ -16,13 +22,20 @@ import edu.wpi.first.wpilibj.Timer;
  */
 public class Superstructure extends Subsystem {
   public Lift lift;
+  public Drivetrain drivetrain;
 
+  private Relay compressor;
+  private DigitalInput compressorSensor;
 
   /**
    * Constructor for Superstructure, purpose can be found at class definition.
    */
   private Superstructure() {
     lift = Lift.getInstance();
+    drivetrain = Drivetrain.getInstance();
+
+    compressor = new Relay(Ports.POWER);
+    compressorSensor = new DigitalInput(Ports.COMPRESSOR);
 
     queuedRequests = new ArrayList<>(0);
   }
@@ -134,6 +147,9 @@ public class Superstructure extends Subsystem {
 
     @Override
     public void onLoop(double timestamp) {
+
+      double liftHeight = lift.getHeight();
+
       synchronized (Superstructure.this) {
         if (!allRequestsCompleted) {
           if (newRequests) {
@@ -187,13 +203,13 @@ public class Superstructure extends Subsystem {
 
     @Override
     public void onStop(double timestamp) {
-
+      disabledState();
     }
 
 
   };
 
-  public synchronized void sendManualRequest(double liftOutput) {
+  public synchronized void sendManualRequest(double liftOutput, Translation2d driveInput) {
     RequestList list = RequestList.emptyList();
     if (liftOutput != 0) {
       list.add(lift.openLoopRequest(liftOutput));
@@ -203,14 +219,21 @@ public class Superstructure extends Subsystem {
     }
   }
 
+  public void enableCompressor() {
+    if (!compressorSensor.get()) {
+      compressor.set(Value.kForward);
+    } else {
+      compressor.set(Value.kOff);
+    }
+  }
+
+  public boolean getCompressorState() {
+    return compressorSensor.get();
+  }
+
   public RequestList idleRequest() {
     return new RequestList(Arrays.asList(lift.openLoopRequest(0.0)), true);
   }
-
-  public void disabledState() {
-
-  }
-
 
   @Override
   public void stop() {
@@ -244,6 +267,14 @@ public class Superstructure extends Subsystem {
   @Override
   public void registerEnabledLooper(ILooper enabledLooper) {
     enabledLooper.register(loop);
+  }
+
+  ///////////////////////////////////// STATES ///////////////////////////////////////////////
+
+  public void disabledState() {
+    RequestList state = new RequestList(Arrays.asList(
+        new EmptyRequest(),
+        lift.heightRequest(0.0)), true);
   }
 
 }

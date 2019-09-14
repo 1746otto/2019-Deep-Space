@@ -7,10 +7,16 @@ import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 import frc.robot.Ports;
+import frc.robot.loops.ILooper;
+import frc.robot.loops.Loop;
+import frc.robot.subsystems.requests.Prerequisite;
+import frc.robot.subsystems.requests.Request;
 import frc.robot.util.LazyTalonSRX;
+import frc.robot.util.Util;
 
 public class Lift extends Subsystem {
   private static Lift instance = null;
@@ -84,6 +90,7 @@ public class Lift extends Subsystem {
     enableLimits(true);
 
     setCurrentLimit(Constants.kLiftCurrentLimit);
+    setCurrentLimit(Constants.kLiftCurrentLimit);
 
     resetToAbsolutePosition();
     configForAscent();
@@ -151,10 +158,10 @@ public class Lift extends Subsystem {
     }
     if (isSensorConnected()) {
       if (heightFeet > getHeight()) {
-        liftRight.selectProfileSlot(0, 0);
+        master.selectProfileSlot(0, 0);
         configForAscent();
       } else if (heightFeet < getHeight()) {
-        liftRight.selectProfileSlot(1, 0);
+        master.selectProfileSlot(1, 0);
         configForDescent();
       }
       targetHeight = heightFeet;
@@ -179,9 +186,148 @@ public class Lift extends Subsystem {
     }
   }
 
+  public Request openLoopRequest(double output) {
+    return new Request(){
+    
+      @Override
+      public void act() {
+        setOpenLoop(output);
+      }
+    };
+  }
+
+  public Request heightRequest(double heightFeet) {
+    return new Request(){
+    
+      @Override
+      public void act() {
+        setTargetHeight(heightFeet);
+      }
+
+      @Override
+      public boolean isFinished() {
+        return hasReachedTargetHeight() || isOpenLoop();
+      }
+    };
+  }
+
+  public Request resetRequest() {
+    return new Request(){
+    
+      @Override
+      public void act() {
+        setOpenLoop(-0.1);
+      }
+
+      @Override
+      public boolean isFinished() {
+        if (Util.epsilonEquals(master.getOutputCurrent(), Constants.kLiftCurrentLimit) 
+            || master.getOutputCurrent() > Constants.kLiftCurrentLimit) {
+              resetToAbsolutePosition();
+              return true;
+            }
+        return false;
+      }
+    };
+  }
+
+  public Request lockHeightRequest() {
+    return new Request(){
+    
+      @Override
+      public void act() {
+        lockHeight();
+      }
+    };
+  }
+
+  public Prerequisite heightRequisite(double height, boolean above) {
+    return new Prerequisite(){
+    
+      @Override
+      public boolean met() {
+        return Util.epsilonEquals(Math.signum(height - getHeight()), above ? 1.0 : -1.0);
+      }
+    };
+  }
+
+  boolean onTarget = false;
+  double startTime = 0.0;
+
+  public boolean hasReachedTargetHeight() {
+    if (master.getControlMode() == ControlMode.MotionMagic) {
+      if (Math.abs(targetHeight - getHeight()) < Constants.kElevatorHeightTolerance) {
+        if (!onTarget) {
+          System.out.println("Elevator Reached Height in: " 
+              + (Timer.getFPGATimestamp() - startTime));
+          onTarget = true;
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean getMotorsWithHighCurrents() {
+    return periodicIO.current >= Constants.kLiftCurrentLimit;
+  }
+
+  private final Loop loop = new Loop(){
+  
+    @Override
+    public void onStart(double timestamp) {
+    
+    }
+  
+    @Override
+    public void onLoop(double timestamp) {
+      if (getMotorsWithHighCurrents()) {
+        DriverStation.reportError("Elevator Current to High", false);
+      }      
+    }
+  
+    @Override
+    public void onStop(double timestamp) {
+      // TODO Auto-generated method stub
+      
+    }
+  };
+
+
   @Override
   public void stop() {
+    setOpenLoop(0.0);
+  }
 
+  @Override
+  public void registerEnabledLooper(ILooper looper) {
+    looper.register(loop);
+  }
+
+
+  @Override
+  public void readPeriodicInputs() {
+    periodicIO.position = master.getSelectedSensorPosition(0);
+
+    if (Constants.kDebuggingOutput) {
+      periodicIO.current = master.getOutputCurrent();
+      periodicIO.velocity = master.getSelectedSensorVelocity(0);
+      periodicIO.voltage = master.getMotorOutputVoltage();
+    }
+  }
+
+  @Override
+  public void writePeriodicOutputs() {
+    if (getState() == ControlState.Position || getState() == ControlState.Locked) {
+      master.set(ControlMode.MotionMagic, periodicIO.demand);
+    } else {
+      master.set(ControlMode.PercentOutput, periodicIO.demand);
+    }
+  }
+
+  @Override
+  public void zeroSensors() {
+    resetToAbsolutePosition();
   }
 
   @Override
@@ -201,6 +347,39 @@ public class Lift extends Subsystem {
         SmartDashboard.putNumber("Elevator Setpoint", master.getClosedLoopTarget());
       }
     }
+  }
+
+  private double encTickToInches(double encTicks) {
+    return encTicks / Constants.kEncTicksPerInch;
+  }
+
+  private int inchesToEncTicks(double inches) {
+    return (int) (inches * Constants.kEncTicksPerInch);
+  }
+
+  public double getHeight() {
+    return encTicksToElevatorHeight(periodicIO.position);
+  }
+
+  public double encTicksToElevatorHeight(double encTicks) {
+    return encTickToInches(encTicks - Constants.kElevatorEncoderStartingPosition);
+  }
+
+  public double elevatorHeightToEncTicks(double elevatorHeight) {
+    return Constants.kElevatorEncoderStartingPosition + inchesToEncTicks(elevatorHeight);
+  }
+
+  public boolean isSensorConnected() {
+    int pulseWidthPeriod = master.getSensorCollection().getPulseWidthRiseToRiseUs();
+    boolean connected = pulseWidthPeriod != 0;
+    if (!connected) {
+      hasEmergency = true;
+    }
+    return connected;
+  }
+
+  public void resetToAbsolutePosition() {
+    master.setSelectedSensorPosition(0, 0, 10);
   }
 
   public static class PeriodicIO {
