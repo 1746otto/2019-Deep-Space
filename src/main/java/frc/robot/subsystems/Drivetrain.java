@@ -2,6 +2,7 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.InvertType;
+import com.ctre.phoenix.motorcontrol.NeutralMode;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 import frc.robot.Ports;
@@ -87,6 +88,11 @@ public class Drivetrain extends Subsystem {
     rightSlave1.setInverted(InvertType.FollowMaster);
     rightSlave2.setInverted(InvertType.FollowMaster);
 
+    rightMaster.configOpenloopRamp(0.0);
+    leftMaster.configOpenloopRamp(0.0);
+    rightMaster.setNeutralMode(NeutralMode.Brake);
+    leftMaster.setNeutralMode(NeutralMode.Brake);
+
   }
 
   public void setOpenLoop(Translation2d driveInput) {
@@ -139,7 +145,9 @@ public class Drivetrain extends Subsystem {
 
   @Override
   public void outputTelemetery() {
-    SmartDashboard.putString("Drivebase State", getState().toString());
+    if (Constants.kDebuggingOutput) {
+      SmartDashboard.putString("Drivebase State", getState().toString());
+    }
   }
 
   public static class PeriodicIO {

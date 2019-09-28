@@ -214,6 +214,9 @@ public class Superstructure extends Subsystem {
     if (liftOutput != 0) {
       list.add(lift.openLoopRequest(liftOutput));
     }
+    if (driveInput.norm() != 0) {
+      list.add(drivetrain.openLoopRequest(driveInput));
+    }
     if (!list.isEmpty()) {
       request(list);
     }
@@ -232,7 +235,8 @@ public class Superstructure extends Subsystem {
   }
 
   public RequestList idleRequest() {
-    return new RequestList(Arrays.asList(lift.openLoopRequest(0.0)), true);
+    return new RequestList(Arrays.asList(lift.openLoopRequest(0.0), 
+        drivetrain.openLoopRequest(new Translation2d(0, 0))), true);
   }
 
   @Override
@@ -273,7 +277,7 @@ public class Superstructure extends Subsystem {
 
   public void disabledState() {
     RequestList state = new RequestList(Arrays.asList(
-        new EmptyRequest(),
+        drivetrain.openLoopRequest(new Translation2d(0, 0)),
         lift.heightRequest(0.0)), true);
   }
 

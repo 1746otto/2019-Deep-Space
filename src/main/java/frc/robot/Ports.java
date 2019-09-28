@@ -28,18 +28,6 @@ public class Ports {
   public static final int LIFT_RIGHT = 60;
   public static final int LIFT_LEFT = 61;
 
-  // Swerve
-  public static final int FR_THROTTLE = 100;
-  public static final int FR_RADIAL = 101;
-
-  public static final int FL_THROTTLE = 200;
-  public static final int FL_RADIAL = 201;
-
-  public static final int BR_THROTTLE = 300;
-  public static final int BR_RADIAL = 301;
-
-  public static final int BL_THROTTLE = 400;
-  public static final int BL_RADIAL = 401;
 
   // MoreBoard
   public static final int EMPTY1 = 10;

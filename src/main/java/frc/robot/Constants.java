@@ -15,6 +15,7 @@ public class Constants {
   public static final double kElevatorHeightTolerance = 10;
   public static final double kEncTicksPerInch = 10;
   public static final double kElevatorEncoderStartingPosition = 10;
+  public static final double kLiftCargoTolerance = 0;
 
 
   // Drive Constants

@@ -212,7 +212,7 @@ public class Lift extends Subsystem {
   }
 
   public Request resetRequest() {
-    return new Request(){
+    return new Request() {
     
       @Override
       public void act() {
