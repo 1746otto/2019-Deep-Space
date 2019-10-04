@@ -4,6 +4,7 @@ import frc.robot.Ports;
 import frc.robot.lib.team254.geometry.Translation2d;
 import frc.robot.loops.ILooper;
 import frc.robot.loops.Loop;
+import frc.robot.subsystems.HatchScorer.GrabState;
 import frc.robot.subsystems.requests.EmptyRequest;
 import frc.robot.subsystems.requests.Request;
 import frc.robot.subsystems.requests.RequestList;
@@ -23,6 +24,8 @@ import edu.wpi.first.wpilibj.Relay.Value;
 public class Superstructure extends Subsystem {
   public Lift lift;
   public Drivetrain drivetrain;
+  public CargoIntake cargoIntake;
+  public HatchScorer hatchScorer;
 
   private Relay compressor;
   private DigitalInput compressorSensor;
@@ -33,6 +36,8 @@ public class Superstructure extends Subsystem {
   private Superstructure() {
     lift = Lift.getInstance();
     drivetrain = Drivetrain.getInstance();
+    cargoIntake = CargoIntake.getInstance();
+    hatchScorer = HatchScorer.getInstance();
 
     compressor = new Relay(Ports.POWER);
     compressorSensor = new DigitalInput(Ports.COMPRESSOR);
@@ -222,12 +227,16 @@ public class Superstructure extends Subsystem {
     }
   }
 
-  public void enableCompressor() {
+  public void toggleCompressor() {
     if (!compressorSensor.get()) {
       compressor.set(Value.kForward);
     } else {
       compressor.set(Value.kOff);
     }
+  }
+
+  public void enableCompressor() {
+
   }
 
   public boolean getCompressorState() {
@@ -278,7 +287,34 @@ public class Superstructure extends Subsystem {
   public void disabledState() {
     RequestList state = new RequestList(Arrays.asList(
         drivetrain.openLoopRequest(new Translation2d(0, 0)),
-        lift.heightRequest(0.0)), true);
+        lift.heightRequest(0.0),
+        cargoIntake.cargoStateRequest(CargoIntake.BumperState.RETRACTED),
+        hatchScorer.stowRequest(HatchScorer.StowState.STOWED),
+        hatchScorer.intakeRequest(GrabState.HOLDING)), true);
+    request(state);
+  }
+
+  public void toggleIntakeState() {
+    if (cargoIntake.getBumperState() == CargoIntake.BumperState.EXTENDED) {
+      RequestList state = new RequestList(Arrays.asList(
+          cargoIntake.cargoStateRequest(CargoIntake.BumperState.RETRACTED),
+          hatchScorer.stowRequest(HatchScorer.StowState.UNSTOWED),
+          hatchScorer.intakeRequest(HatchScorer.GrabState.INTAKING)), false);
+      request(state);
+    } 
+    if (cargoIntake.getBumperState() == CargoIntake.BumperState.RETRACTED) {
+      RequestList state = new RequestList(Arrays.asList(
+          hatchScorer.intakeRequest(GrabState.HOLDING),
+          hatchScorer.stowRequest(HatchScorer.StowState.STOWED),
+          cargoIntake.cargoStateRequest(CargoIntake.BumperState.EXTENDED)), false);
+      request(state);
+    }
+  }
+
+  public void resetLiftRequest() {
+    RequestList state = new RequestList(Arrays.asList(
+        lift.resetRequest()), false);
+    request(state);
   }
 
 }

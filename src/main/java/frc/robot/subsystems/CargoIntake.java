@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class CargoIntake extends Subsystem {
-  private CargoIntake instance = null;
+  private static CargoIntake instance = null;
 
   private DigitalInput cargoSensor;
 
@@ -34,7 +34,7 @@ public class CargoIntake extends Subsystem {
 
   private Lift lift;
 
-  public CargoIntake getInstance() {
+  public static CargoIntake getInstance() {
     if (instance == null) {
       instance = new CargoIntake();
     } 
@@ -60,11 +60,11 @@ public class CargoIntake extends Subsystem {
     overBumperSolenoid.set(true);
   }
 
-  public enum IntakeState {
+  public static enum IntakeState {
     NEUTRAL, INTAKING, HOLDING, EJECTING
   }
 
-  public enum BumperState {
+  public static enum BumperState {
     RETRACTED, EXTENDED 
   }
 
@@ -117,7 +117,7 @@ public class CargoIntake extends Subsystem {
     };
   }
 
-  private void setIntakeSpeed(double output) {
+  public void setIntakeSpeed(double output) {
     if (Util.epsilonEquals(Math.signum(output), 1.0)) {
       setIntakeState(IntakeState.INTAKING);
     } else if (Util.epsilonEquals(Math.signum(output), -1.0)) {
@@ -129,6 +129,14 @@ public class CargoIntake extends Subsystem {
     overBumper.set(ControlMode.PercentOutput, output);
   }
 
+  public void toggleBumperState() {
+    if (getBumperState() == BumperState.EXTENDED) {
+      setBumperState(BumperState.RETRACTED);
+    } else if (getBumperState() == BumperState.RETRACTED) {
+      setBumperState(BumperState.EXTENDED);
+    }
+  }
+
   private final Loop loop = new Loop() {
   
     @Override
@@ -138,11 +146,12 @@ public class CargoIntake extends Subsystem {
   
     @Override
     public void onLoop(double timestamp) {
-      if (lift.getHeight() > Constants.kLiftCargoTolerance) {
+      if (lift.getHeight() >= Constants.kLowLevelCargoHeight) {
         setBumperState(BumperState.RETRACTED);
       }
       if (cargoSensor.get()) {
         setIntakeState(IntakeState.HOLDING);
+        slaves.forEach(s -> s.set(ControlMode.PercentOutput, 0.07));
       }    
     }
   

@@ -7,9 +7,21 @@
 
 package frc.robot;
 
+import java.util.Arrays;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.io.Xbox;
+import frc.robot.lib.team254.geometry.Translation2d;
+import frc.robot.loops.Looper;
+import frc.robot.subsystems.CargoIntake;
+import frc.robot.subsystems.Drivetrain;
+import frc.robot.subsystems.HatchScorer;
+import frc.robot.subsystems.Lift;
+import frc.robot.subsystems.SubsystemManager;
+import frc.robot.subsystems.Superstructure;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -19,10 +31,20 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * project.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  private Drivetrain driveTrain;
+  private Lift lift;
+  private HatchScorer hatchScorer;
+  private CargoIntake cargoIntake;
+  private Superstructure s;
+  private SubsystemManager subsystems;
+
+  private Looper enabledLooper = new Looper();
+  private Looper disabledLooper = new Looper();
+
+  private DriverStation ds = DriverStation.getInstance();
+
+  private Xbox driver;
+  private Xbox coDriver;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -30,9 +52,31 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+    s = Superstructure.getInstance();
+    cargoIntake = CargoIntake.getInstance();
+    hatchScorer = HatchScorer.getInstance();
+    driveTrain = Drivetrain.getInstance();
+    lift = Lift.getInstance();
+    subsystems = new SubsystemManager(Arrays.asList(s, cargoIntake, hatchScorer, driveTrain, lift));
+
+    driver = new Xbox(0);
+    coDriver = new Xbox(1);
+    driver.setDeadband(0.1);
+    coDriver.setDeadband(0.1);
+
+    subsystems.registerEnabledLoops(enabledLooper);
+    subsystems.registerDisabledLooper(disabledLooper);
+  }
+
+  public void allPeriodic() {
+    subsystems.outputToSmartDashboard();
+    enabledLooper.outputToSmartDashboard();
+    SmartDashboard.putBoolean("Enabled", ds.isEnabled());
+  }
+
+  public void teleopConfig() {
+    lift.setCurrentLimit(Constants.kLiftCurrentLimit + 5);
+    lift.configForTeleopSpeed();
   }
 
   /**
@@ -60,9 +104,13 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+    try {
+      disabledLooper.stop();
+      enabledLooper.start();
+      teleopConfig();
+    } catch (Throwable t) {
+      throw t;
+    }
   }
 
   /**
@@ -70,28 +118,137 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
+    try {
+      driver.update();
+      allPeriodic();
+      twoControllerMode();
+    } catch (Throwable t) {
+      throw t;
     }
   }
+
+  @Override
+  public void teleopInit() {
+    try {
+      disabledLooper.stop();
+      enabledLooper.start();
+      teleopConfig();
+    } catch (Throwable t) {
+      throw t;
+    }
+  }
+  
 
   /**
    * This function is called periodically during operator control.
    */
   @Override
   public void teleopPeriodic() {
+    try {
+      driver.update();
+      coDriver.update();
+      twoControllerMode();
+      allPeriodic();
+    } catch (Throwable t) {
+      throw t;
+    }
   }
 
   /**
    * This function is called periodically during test mode.
    */
+
+  @Override
+  public void disabledInit() {
+    try {
+      enabledLooper.stop();
+      disabledLooper.start();
+      subsystems.stop();
+    } catch (Throwable t) {
+      throw t;
+    }
+  }
+
+  @Override
+  public void disabledPeriodic() {
+    try {
+      allPeriodic();
+    } catch (Throwable t) {
+      throw t;
+    }
+  }
+
+  @Override
+  public void testInit() {
+    s.toggleCompressor();  
+  }
+
   @Override
   public void testPeriodic() {
+    if (s.getCompressorState()) {
+      s.toggleCompressor();
+    }
+  }
+
+  public void twoControllerMode() {
+    double driveXInput = driver.getX(Hand.kLeft);
+    double driveYInput = driver.getY(Hand.kLeft);
+
+    driveTrain.setOpenLoop(new Translation2d(driveXInput, driveYInput));
+
+    double liftInput = driver.getY(Hand.kRight);
+
+    if (Math.abs(liftInput) != 0) {
+      lift.setOpenLoop(liftInput);
+    } else if (lift.isOpenLoop()) {
+      lift.lockHeight();
+    }
+
+    if (driver.aButton.wasActivated()) {
+      lift.setTargetHeight(0.0);
+      s.resetLiftRequest();
+    } else if (driver.xButton.wasActivated()) {
+      if (cargoIntake.getCargoSensor()) {
+        lift.setTargetHeight(Constants.kHighLevelCargoHeight);
+        lift.lockHeight();
+      } else {
+        lift.setTargetHeight(Constants.kHighLevelHatchRocketHeight);
+        lift.lockHeight();
+      }
+    } else if (driver.yButton.wasActivated()) {
+      if (cargoIntake.getCargoSensor()) {
+        lift.setTargetHeight(Constants.kMidLevelCargoHeight);
+        lift.lockHeight();
+      } else {
+        lift.setTargetHeight(Constants.kMidLevelHatchRocketHeight);
+        lift.lockHeight();
+      }
+    } else if (driver.POV0.wasActivated()) {
+      lift.setTargetHeight(Constants.kCargoShipHeight);
+      lift.lockHeight();
+    } else if (driver.POV180.wasActivated()) {
+      lift.setTargetHeight(Constants.kLowLevelCargoHeight);
+      lift.lockHeight();
+    }
+
+    if (driver.backButton.wasActivated()) {
+      s.toggleIntakeState();
+    }
+
+    if (driver.startButton.wasActivated()) {
+      cargoIntake.toggleBumperState();
+    }
+
+    if (driver.leftBumper.wasActivated()) {
+      hatchScorer.toggleIntakeState();
+    }
+
+    if (driver.rightBumper.wasActivated()) {
+      hatchScorer.toggleStowState();
+    }
+
+    cargoIntake.setIntakeSpeed(driver.getTriggerAxis(Hand.kRight) 
+        - driver.getTriggerAxis(Hand.kLeft));
+
   }
 }

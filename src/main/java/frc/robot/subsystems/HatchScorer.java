@@ -23,11 +23,11 @@ public class HatchScorer extends Subsystem {
     return instance;
   }
 
-  public enum GrabState {
+  public static enum GrabState {
     HOLDING, INTAKING
   }
 
-  public enum StowState {
+  public static enum StowState {
     STOWED, UNSTOWED
   }
 
@@ -79,6 +79,22 @@ public class HatchScorer extends Subsystem {
         setGrabState(state);
       }
     };
+  }
+
+  public void toggleIntakeState() {
+    if (getGrabState() == GrabState.HOLDING) {
+      setGrabState(GrabState.INTAKING);
+    } else if (getGrabState() == GrabState.INTAKING) {
+      setGrabState(GrabState.HOLDING);
+    }
+  }
+
+  public void toggleStowState() {
+    if (getStowState() == StowState.STOWED) {
+      setStowState(StowState.UNSTOWED);
+    } else if (getStowState() == StowState.UNSTOWED) {
+      setStowState(StowState.STOWED);
+    }
   }
   
  

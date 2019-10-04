@@ -149,23 +149,23 @@ public class Lift extends Subsystem {
     return getState() == ControlState.OpenLoop;
   }
 
-  public synchronized void setTargetHeight(double heightFeet) {
+  public synchronized void setTargetHeight(double heightInches) {
     setState(ControlState.Position);
-    if (heightFeet > Constants.kMaxElevatorHeight) {
-      heightFeet = Constants.kMaxElevatorHeight;
-    } else if (heightFeet < Constants.kMinElevatorHeight) {
-      heightFeet = Constants.kMinElevatorHeight;
+    if (heightInches > Constants.kMaxElevatorHeight) {
+      heightInches = Constants.kMaxElevatorHeight;
+    } else if (heightInches < Constants.kMinElevatorHeight) {
+      heightInches = Constants.kMinElevatorHeight;
     }
     if (isSensorConnected()) {
-      if (heightFeet > getHeight()) {
+      if (heightInches > getHeight()) {
         master.selectProfileSlot(0, 0);
         configForAscent();
-      } else if (heightFeet < getHeight()) {
+      } else if (heightInches < getHeight()) {
         master.selectProfileSlot(1, 0);
         configForDescent();
       }
-      targetHeight = heightFeet;
-      periodicIO.demand = elevatorHeightToEncTicks(heightFeet);
+      targetHeight = heightInches;
+      periodicIO.demand = elevatorHeightToEncTicks(heightInches);
       onTarget = false;
       startTime = Timer.getFPGATimestamp();
     } else {
@@ -196,12 +196,12 @@ public class Lift extends Subsystem {
     };
   }
 
-  public Request heightRequest(double heightFeet) {
+  public Request heightRequest(double heightInches) {
     return new Request(){
     
       @Override
       public void act() {
-        setTargetHeight(heightFeet);
+        setTargetHeight(heightInches);
       }
 
       @Override
@@ -350,11 +350,11 @@ public class Lift extends Subsystem {
   }
 
   private double encTickToInches(double encTicks) {
-    return encTicks / Constants.kEncTicksPerInch;
+    return ((encTicks / Constants.kEncTicksPerInch) + Constants.kElevatorInitialHeight);
   }
 
   private int inchesToEncTicks(double inches) {
-    return (int) (inches * Constants.kEncTicksPerInch);
+    return (int) ((inches - Constants.kElevatorInitialHeight) * Constants.kEncTicksPerInch);
   }
 
   public double getHeight() {
@@ -362,11 +362,11 @@ public class Lift extends Subsystem {
   }
 
   public double encTicksToElevatorHeight(double encTicks) {
-    return encTickToInches(encTicks - Constants.kElevatorEncoderStartingPosition);
+    return encTickToInches(encTicks);
   }
 
   public double elevatorHeightToEncTicks(double elevatorHeight) {
-    return Constants.kElevatorEncoderStartingPosition + inchesToEncTicks(elevatorHeight);
+    return inchesToEncTicks(elevatorHeight);
   }
 
   public boolean isSensorConnected() {
