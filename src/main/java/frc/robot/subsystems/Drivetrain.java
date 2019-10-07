@@ -78,15 +78,21 @@ public class Drivetrain extends Subsystem {
 
     slaves = Arrays.asList(rightSlave1, rightSlave2, leftSlave1, leftSlave2);
 
-    rightSlave1.set(ControlMode.Follower, Ports.MOTOR_DRIVE_RIGHT_MASTER);
-    rightSlave2.set(ControlMode.Follower, Ports.MOTOR_DRIVE_RIGHT_MASTER);
+    // rightSlave1.set(ControlMode.Follower, Ports.MOTOR_DRIVE_RIGHT_MASTER);
+    // rightSlave2.set(ControlMode.Follower, Ports.MOTOR_DRIVE_RIGHT_MASTER);
 
-    leftSlave1.set(ControlMode.Follower, Ports.MOTOR_DRIVE_LEFT_MASTER);
-    leftSlave2.set(ControlMode.Follower, Ports.MOTOR_DRIVE_LEFT_MASTER);
+    // leftSlave1.set(ControlMode.Follower, Ports.MOTOR_DRIVE_LEFT_MASTER);
+    // leftSlave2.set(ControlMode.Follower, Ports.MOTOR_DRIVE_LEFT_MASTER);
 
-    rightMaster.setInverted(InvertType.InvertMotorOutput);
-    rightSlave1.setInverted(InvertType.FollowMaster);
-    rightSlave2.setInverted(InvertType.FollowMaster);
+    rightSlave1.follow(rightMaster);
+    rightSlave2.follow(rightMaster);
+
+    leftSlave1.follow(leftMaster);
+    leftSlave2.follow(leftMaster);
+
+    rightMaster.setInverted(true);
+    rightSlave1.setInverted(true);
+    rightSlave2.setInverted(true);
 
     rightMaster.configOpenloopRamp(0.0);
     leftMaster.configOpenloopRamp(0.0);
@@ -99,16 +105,16 @@ public class Drivetrain extends Subsystem {
     setState(ControlState.OPEN_LOOP);
     periodicIO.controlMode = ControlMode.PercentOutput;
 
-    if (Math.abs(driveInput.x()) > Math.abs(driveInput.y())) {
-      periodicIO.rightDemand = Util.boundToScope(0, maxSpeed, ((-driveInput.y()) 
-          - (driveInput.x())));
-      periodicIO.leftDemand = Util.boundToScope(0, maxSpeed, ((-driveInput.y()) 
-          + (driveInput.x())));
+    if (Math.abs(driveInput.y()) > Math.abs(driveInput.x())) {
+      periodicIO.rightDemand = 
+       (driveInput.y()/10*9) - (driveInput.x()/10*7.5);
+      periodicIO.leftDemand = 
+       (driveInput.y()/10*9) + (driveInput.x()/10*7);
     } else {
       periodicIO.rightDemand =
-          Util.boundToScope(0, maxSpeed, ((-driveInput.y()) - (driveInput.x())));
+       (driveInput.y()/10*9) - (driveInput.x()/10*8.5);
       periodicIO.leftDemand =
-          Util.boundToScope(0, maxSpeed, ((-driveInput.y()) + (driveInput.x())));
+       (driveInput.y()/10*9) + (driveInput.x()/10*8);
     }
   }
 
@@ -119,14 +125,14 @@ public class Drivetrain extends Subsystem {
       public void act() {
         if (Math.abs(driveInput.x()) > Math.abs(driveInput.y())) {
           periodicIO.rightDemand =
-              Util.boundToScope(0, maxSpeed, ((-driveInput.y()) - (driveInput.x())));
+              Util.boundToScope(0, maxSpeed, ((driveInput.y()) - (driveInput.x())));
           periodicIO.leftDemand =
-              Util.boundToScope(0, maxSpeed, ((-driveInput.y()) + (driveInput.x())));
+              Util.boundToScope(0, maxSpeed, ((driveInput.y()) + (driveInput.x())));
         } else {
           periodicIO.rightDemand =
-              Util.boundToScope(0, maxSpeed, ((-driveInput.y()) - (driveInput.x())));
+              Util.boundToScope(0, maxSpeed, ((driveInput.y()) - (driveInput.x())));
           periodicIO.leftDemand =
-              Util.boundToScope(0, maxSpeed, ((-driveInput.y()) + (driveInput.x())));
+              Util.boundToScope(0, maxSpeed, ((driveInput.y()) + (driveInput.x())));
         }
       }
     };

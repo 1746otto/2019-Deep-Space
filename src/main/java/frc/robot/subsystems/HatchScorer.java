@@ -53,8 +53,8 @@ public class HatchScorer extends Subsystem {
   private HatchScorer() {
     hatchSensor = new DigitalInput(Ports.HATCH1);
 
-    stowSolenoid = new LazyDoubleSolenoid(Ports.HATCHENOID11, Ports.HATCHENOID12);
-    intakeSolenoid = new LazyDoubleSolenoid(Ports.HATCHENOID21, Ports.HATCHENOID22);
+    intakeSolenoid = new LazyDoubleSolenoid(Ports.HATCHENOID11, Ports.HATCHENOID12);
+    stowSolenoid = new LazyDoubleSolenoid(Ports.HATCHENOID21, Ports.HATCHENOID22);
 
     stowSolenoid.set(Value.kOff);
     intakeSolenoid.set(Value.kOff);

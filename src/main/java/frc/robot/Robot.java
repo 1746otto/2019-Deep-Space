@@ -44,7 +44,6 @@ public class Robot extends TimedRobot {
   private DriverStation ds = DriverStation.getInstance();
 
   private Xbox driver;
-  private Xbox coDriver;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -60,9 +59,7 @@ public class Robot extends TimedRobot {
     subsystems = new SubsystemManager(Arrays.asList(s, cargoIntake, hatchScorer, driveTrain, lift));
 
     driver = new Xbox(0);
-    coDriver = new Xbox(1);
     driver.setDeadband(0.1);
-    coDriver.setDeadband(0.1);
 
     subsystems.registerEnabledLoops(enabledLooper);
     subsystems.registerDisabledLooper(disabledLooper);
@@ -146,7 +143,6 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     try {
       driver.update();
-      coDriver.update();
       twoControllerMode();
       allPeriodic();
     } catch (Throwable t) {
@@ -192,45 +188,38 @@ public class Robot extends TimedRobot {
 
   public void twoControllerMode() {
     double driveXInput = driver.getX(Hand.kLeft);
-    double driveYInput = driver.getY(Hand.kLeft);
+    double driveYInput = -driver.getY(Hand.kLeft);
 
     driveTrain.setOpenLoop(new Translation2d(driveXInput, driveYInput));
 
     double liftInput = driver.getY(Hand.kRight);
 
     if (Math.abs(liftInput) != 0) {
-      lift.setOpenLoop(liftInput);
+      lift.setOpenLoop(-liftInput);
     } else if (lift.isOpenLoop()) {
       lift.lockHeight();
     }
 
     if (driver.aButton.wasActivated()) {
-      lift.setTargetHeight(0.0);
-      s.resetLiftRequest();
+      s.resetLiftState();
     } else if (driver.xButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
-        lift.setTargetHeight(Constants.kHighLevelCargoHeight);
-        lift.lockHeight();
+        s.liftHeightState(Constants.kMidLevelCargoHeight);
       } else {
-        lift.setTargetHeight(Constants.kHighLevelHatchRocketHeight);
-        lift.lockHeight();
+        s.liftHeightState(Constants.kMidLevelHatchRocketHeight);
       }
     } else if (driver.yButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
-        lift.setTargetHeight(Constants.kMidLevelCargoHeight);
-        lift.lockHeight();
+        s.liftHeightState(Constants.kMidLevelCargoHeight);
       } else {
-        lift.setTargetHeight(Constants.kMidLevelHatchRocketHeight);
-        lift.lockHeight();
+        s.liftHeightState(Constants.kMidLevelHatchRocketHeight);
       }
     } else if (driver.POV0.wasActivated()) {
-      lift.setTargetHeight(Constants.kCargoShipHeight);
-      lift.lockHeight();
-    } else if (driver.POV180.wasActivated()) {
-      lift.setTargetHeight(Constants.kLowLevelCargoHeight);
-      lift.lockHeight();
-    }
-
+      s.liftHeightState(Constants.kCargoShipHeight);
+    } else if (driver.bButton.wasActivated()) {
+      s.liftHeightState(Constants.kLowLevelCargoHeight);
+    } 
+    
     if (driver.backButton.wasActivated()) {
       s.toggleIntakeState();
     }
@@ -239,11 +228,11 @@ public class Robot extends TimedRobot {
       cargoIntake.toggleBumperState();
     }
 
-    if (driver.leftBumper.wasActivated()) {
+    if (driver.rightBumper.wasActivated()) {
       hatchScorer.toggleIntakeState();
     }
 
-    if (driver.rightBumper.wasActivated()) {
+    if (driver.leftBumper.wasActivated()) {
       hatchScorer.toggleStowState();
     }
 
