@@ -87,9 +87,6 @@ public class SubsystemManager implements ILooper {
       for (Subsystem s : mAllSubsystems) {
         s.readPeriodicInputs();
       }
-      for (Subsystem s : mAllSubsystems) {
-        s.writePeriodicOutputs();
-      }
     }
 
     @Override

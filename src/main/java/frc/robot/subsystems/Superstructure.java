@@ -287,7 +287,7 @@ public class Superstructure extends Subsystem {
   public void disabledState() {
     RequestList state = new RequestList(Arrays.asList(
         drivetrain.openLoopRequest(new Translation2d(0, 0)),
-        lift.heightRequest(0.0),
+        lift.resetRequest(),
         cargoIntake.cargoStateRequest(CargoIntake.BumperState.RETRACTED),
         hatchScorer.stowRequest(HatchScorer.StowState.STOWED),
         hatchScorer.intakeRequest(GrabState.HOLDING)), true);

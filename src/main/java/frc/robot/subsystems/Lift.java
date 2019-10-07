@@ -216,7 +216,7 @@ public class Lift extends Subsystem {
     
       @Override
       public void act() {
-        setOpenLoop(-0.1);
+        setOpenLoop(-0.3);
       }
 
       @Override
@@ -350,11 +350,11 @@ public class Lift extends Subsystem {
   }
 
   private double encTickToInches(double encTicks) {
-    return ((encTicks / Constants.kEncTicksPerInch) + Constants.kElevatorInitialHeight);
+    return encTicks / Constants.kEncTicksPerInch;
   }
 
   private int inchesToEncTicks(double inches) {
-    return (int) ((inches - Constants.kElevatorInitialHeight) * Constants.kEncTicksPerInch);
+    return (int) (inches * Constants.kEncTicksPerInch);
   }
 
   public double getHeight() {
@@ -362,24 +362,25 @@ public class Lift extends Subsystem {
   }
 
   public double encTicksToElevatorHeight(double encTicks) {
-    return encTickToInches(encTicks);
+    return (encTickToInches(encTicks) + Constants.kElevatorInitialHeight) 
+      * Constants.kCascadingFactor;
   }
 
   public double elevatorHeightToEncTicks(double elevatorHeight) {
-    return inchesToEncTicks(elevatorHeight);
+    return inchesToEncTicks((elevatorHeight - Constants.kElevatorInitialHeight) 
+      / Constants.kCascadingFactor);
   }
 
   public boolean isSensorConnected() {
-    int pulseWidthPeriod = master.getSensorCollection().getPulseWidthRiseToRiseUs();
-    boolean connected = pulseWidthPeriod != 0;
+    boolean connected = master.getSensorCollection().getPinStateQuadA();
     if (!connected) {
       hasEmergency = true;
     }
-    return connected;
+    return true;
   }
 
   public void resetToAbsolutePosition() {
-    master.setSelectedSensorPosition(0, 0, 10);
+    master.setSelectedSensorPosition(0);
   }
 
   public static class PeriodicIO {

@@ -205,30 +205,23 @@ public class Robot extends TimedRobot {
     }
 
     if (driver.aButton.wasActivated()) {
-      lift.setTargetHeight(0.0);
       s.resetLiftRequest();
     } else if (driver.xButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
         lift.setTargetHeight(Constants.kHighLevelCargoHeight);
-        lift.lockHeight();
       } else {
         lift.setTargetHeight(Constants.kHighLevelHatchRocketHeight);
-        lift.lockHeight();
       }
     } else if (driver.yButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
         lift.setTargetHeight(Constants.kMidLevelCargoHeight);
-        lift.lockHeight();
       } else {
         lift.setTargetHeight(Constants.kMidLevelHatchRocketHeight);
-        lift.lockHeight();
       }
     } else if (driver.POV0.wasActivated()) {
       lift.setTargetHeight(Constants.kCargoShipHeight);
-      lift.lockHeight();
-    } else if (driver.POV180.wasActivated()) {
+    } else if (driver.bButton.wasActivated()) {
       lift.setTargetHeight(Constants.kLowLevelCargoHeight);
-      lift.lockHeight();
     }
 
     if (driver.backButton.wasActivated()) {

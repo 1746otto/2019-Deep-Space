@@ -1,15 +1,15 @@
 package frc.robot;
 
 public class Constants {
-  public static final boolean kDebuggingOutput = false;
-  public static final int kPeriod = 20;
+  public static final boolean kDebuggingOutput = true;
+  public static final double kPeriod = 0.02;
   public static final double kElipson = 1e-6;
 
   // Elevator
-  public static final double kLiftMaxSpeedHighGear = 696.96 * Constants.kElevatorEncRes / 600.0;
-  public static final double kElevatorEncRes = 100;
-  public static final double kElevatorToEncoderRatio = 3;
-  public static final double kEncTicksPerInch = kElevatorToEncoderRatio * kElevatorEncRes;
+  public static final double kLiftMaxSpeedHighGear = 1440.1 * Constants.kElevatorEncRes / 600.0;
+  public static final double kElevatorEncRes = 1024;
+  public static final double kEncTicksPerInch = 100;
+  public static final double kCascadingFactor = 3;
   public static final double kElevatorInitialHeight = 4.375;
 
   public static final double kMaxElevatorHeight = 90;
