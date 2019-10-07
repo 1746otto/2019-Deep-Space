@@ -11,7 +11,6 @@ import frc.robot.Ports;
 import frc.robot.loops.ILooper;
 import frc.robot.loops.Loop;
 import frc.robot.subsystems.requests.Request;
-import frc.robot.util.LazyTalonSRX;
 import frc.robot.util.LazyVictorSPX;
 import frc.robot.util.Util;
 
@@ -26,11 +25,11 @@ public class CargoIntake extends Subsystem {
   private LazyVictorSPX intakeRight;
   private LazyVictorSPX intakeLeft;
 
-  private LazyTalonSRX overBumper;
+  private LazyVictorSPX overBumper;
   private Solenoid overBumperSolenoid;
 
-  List<LazyTalonSRX> masters;
-  List<LazyVictorSPX> slaves;
+  List<LazyVictorSPX> motors;
+  List<LazyVictorSPX> intakeMotors;
 
   private Lift lift;
 
@@ -46,18 +45,18 @@ public class CargoIntake extends Subsystem {
 
     cargoSensor = new DigitalInput(Ports.BALLS);
 
-    overBumper = new LazyTalonSRX(Ports.OVER_BUMPER);
+    overBumper = new LazyVictorSPX(Ports.OVER_BUMPER);
 
     intakeRight = new LazyVictorSPX(Ports.BALL_RIGHT);
     intakeLeft = new LazyVictorSPX(Ports.BALL_LEFT);
 
-    masters = Arrays.asList(overBumper);
-    slaves = Arrays.asList(intakeRight, intakeLeft);
+    intakeRight.setInverted(true);
 
-    slaves.forEach(s -> s.set(ControlMode.Follower, Ports.OVER_BUMPER));
+    motors = Arrays.asList(overBumper, intakeRight, intakeLeft);
+    intakeMotors = Arrays.asList(intakeRight, intakeLeft);
 
     overBumperSolenoid = new Solenoid(Ports.BALLENOID);
-    overBumperSolenoid.set(true);
+    overBumperSolenoid.set(false);
   }
 
   public static enum IntakeState {
@@ -124,9 +123,9 @@ public class CargoIntake extends Subsystem {
       setIntakeState(IntakeState.EJECTING);
     } else {
       setIntakeState(IntakeState.NEUTRAL);
-      overBumper.set(ControlMode.PercentOutput, 0.0);
+      motors.forEach(m -> m.set(ControlMode.PercentOutput, 0.0));
     }
-    overBumper.set(ControlMode.PercentOutput, output);
+    motors.forEach(m -> m.set(ControlMode.PercentOutput, output));
   }
 
   public void toggleBumperState() {
@@ -151,7 +150,9 @@ public class CargoIntake extends Subsystem {
       }
       if (cargoSensor.get()) {
         setIntakeState(IntakeState.HOLDING);
-        slaves.forEach(s -> s.set(ControlMode.PercentOutput, 0.07));
+        intakeMotors.forEach(s -> s.set(ControlMode.PercentOutput, 0.0));
+      } else {
+        intakeMotors.forEach(s -> s.set(ControlMode.PercentOutput, 0.07));
       }    
     }
   
@@ -170,10 +171,10 @@ public class CargoIntake extends Subsystem {
   public void writePeriodicOutputs() {
     switch (bumperState) {
       case RETRACTED:
-        overBumperSolenoid.set(true);
+        overBumperSolenoid.set(false);
         break;
       case EXTENDED:
-        overBumperSolenoid.set(false);
+        overBumperSolenoid.set(true);
         break;
       default:
         break;

@@ -75,7 +75,7 @@ public class Lift extends Subsystem {
     motors = Arrays.asList(master, slave);
     slaves = Arrays.asList(slave);
     
-    slaves.forEach((s) -> s.set(ControlMode.Follower, Ports.ELEVATOR_TALON));
+    slaves.forEach((s) -> s.follow(master));
     
     for (LazyTalonSRX motor : motors) {
       motor.configVoltageCompSaturation(12.0, 10);
@@ -85,11 +85,10 @@ public class Lift extends Subsystem {
     
     master.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder, 0, 10);
     master.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 10);
-    master.configForwardSoftLimitEnable(true, 10);
-    master.configReverseSoftLimitEnable(true, 10);
-    enableLimits(true);
+    // master.configForwardSoftLimitEnable(true, 10);
+    // master.configReverseSoftLimitEnable(true, 10);
+    // enableLimits(false);
 
-    setCurrentLimit(Constants.kLiftCurrentLimit);
     setCurrentLimit(Constants.kLiftCurrentLimit);
 
     resetToAbsolutePosition();
@@ -99,18 +98,18 @@ public class Lift extends Subsystem {
   private void configForAscent() {
     manualSpeed = Constants.kLiftTeleopManualSpeed;
 
-    master.config_kP(0, 1.75, 10);
+    master.config_kP(0, 0.50, 10);
     master.config_kI(0, 0.0, 10);
-    master.config_kD(0, 40.0, 10);
+    master.config_kD(0, 5, 10);
     master.config_kF(0, 1023.0 / Constants.kLiftMaxSpeedHighGear, 10);
 
-    master.config_kP(1, 1.5, 10);
+    master.config_kP(1, 0.50, 10);
     master.config_kI(1, 0.0, 10);
-    master.config_kD(1, 30.0, 10);
+    master.config_kD(1, 5, 10);
     master.config_kF(1, 1023.0 / Constants.kLiftMaxSpeedHighGear, 10);
 
-    master.configMotionCruiseVelocity((int)(Constants.kLiftMaxSpeedHighGear * 1.0), 10);
-    master.configMotionAcceleration((int)(Constants.kLiftMaxSpeedHighGear * 3.0), 10);
+    master.configMotionCruiseVelocity((int)(300 * 1.0), 10);
+    master.configMotionAcceleration((int)(300 * 3.0), 10);
     master.configMotionSCurveStrength(0);
 
     configForAscent = true;
@@ -339,11 +338,12 @@ public class Lift extends Subsystem {
       SmartDashboard.putNumber("Elevator 2 Voltage", slave.getMotorOutputVoltage());
       SmartDashboard.putNumber("Elevator 1 Current", periodicIO.current);
       SmartDashboard.putNumber("Elevator Pulse Width Position",
-          master.getSensorCollection().getPulseWidthPosition());
+          master.getSensorCollection().getAnalogIn());
       SmartDashboard.putNumber("Elevator Encoder", periodicIO.position);
       SmartDashboard.putNumber("Elevator Velocity", periodicIO.velocity);
       SmartDashboard.putNumber("Elevator Error", master.getClosedLoopError(0));
       if (master.getControlMode() == ControlMode.MotionMagic) {
+        SmartDashboard.putNumber("Elevator Desired Setpoint", targetHeight);
         SmartDashboard.putNumber("Elevator Setpoint", master.getClosedLoopTarget());
       }
     }

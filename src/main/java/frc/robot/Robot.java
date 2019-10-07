@@ -44,7 +44,6 @@ public class Robot extends TimedRobot {
   private DriverStation ds = DriverStation.getInstance();
 
   private Xbox driver;
-  private Xbox coDriver;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -60,9 +59,7 @@ public class Robot extends TimedRobot {
     subsystems = new SubsystemManager(Arrays.asList(s, cargoIntake, hatchScorer, driveTrain, lift));
 
     driver = new Xbox(0);
-    coDriver = new Xbox(1);
-    driver.setDeadband(0.1);
-    coDriver.setDeadband(0.1);
+    driver.setDeadband(0.2);
 
     subsystems.registerEnabledLoops(enabledLooper);
     subsystems.registerDisabledLooper(disabledLooper);
@@ -146,7 +143,6 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     try {
       driver.update();
-      coDriver.update();
       twoControllerMode();
       allPeriodic();
     } catch (Throwable t) {
@@ -192,20 +188,20 @@ public class Robot extends TimedRobot {
 
   public void twoControllerMode() {
     double driveXInput = driver.getX(Hand.kLeft);
-    double driveYInput = driver.getY(Hand.kLeft);
+    double driveYInput = -driver.getY(Hand.kLeft);
 
     driveTrain.setOpenLoop(new Translation2d(driveXInput, driveYInput));
 
     double liftInput = driver.getY(Hand.kRight);
 
     if (Math.abs(liftInput) != 0) {
-      lift.setOpenLoop(liftInput);
+      lift.setOpenLoop(-liftInput);
     } else if (lift.isOpenLoop()) {
       lift.lockHeight();
     }
 
     if (driver.aButton.wasActivated()) {
-      s.resetLiftRequest();
+      s.resetLiftState();
     } else if (driver.xButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
         lift.setTargetHeight(Constants.kHighLevelCargoHeight);
@@ -232,11 +228,11 @@ public class Robot extends TimedRobot {
       cargoIntake.toggleBumperState();
     }
 
-    if (driver.leftBumper.wasActivated()) {
+    if (driver.rightBumper.wasActivated()) {
       hatchScorer.toggleIntakeState();
     }
 
-    if (driver.rightBumper.wasActivated()) {
+    if (driver.leftBumper.wasActivated()) {
       hatchScorer.toggleStowState();
     }
 
