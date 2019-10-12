@@ -56,7 +56,6 @@ public class CargoIntake extends Subsystem {
     intakeMotors = Arrays.asList(intakeRight, intakeLeft);
 
     overBumperSolenoid = new Solenoid(Ports.BALLENOID);
-    overBumperSolenoid.set(false);
   }
 
   public static enum IntakeState {
@@ -150,7 +149,6 @@ public class CargoIntake extends Subsystem {
       }
       if (cargoSensor.get()) {
         setIntakeState(IntakeState.HOLDING);
-        intakeMotors.forEach(s -> s.set(ControlMode.PercentOutput, 0.0));
       } else {
         intakeMotors.forEach(s -> s.set(ControlMode.PercentOutput, 0.07));
       }    

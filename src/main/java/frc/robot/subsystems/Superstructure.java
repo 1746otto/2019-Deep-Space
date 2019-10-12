@@ -313,18 +313,15 @@ public class Superstructure extends Subsystem {
 
   public void liftHeightState(double heightInches) {
     RequestList state = new RequestList(Arrays.asList(
-      lift.heightRequest(heightInches),
-      lift.lockHeightRequest()), false);
+        lift.heightRequest(heightInches),
+        lift.lockHeightRequest()), false);
     request(state);
   }
 
   public void resetLiftState() {
     RequestList state = new RequestList(Arrays.asList(
-        lift.heightRequest(0.0),
-        lift.lockHeightRequest()), false);
-    RequestList queue = new RequestList(Arrays.asList(
         lift.resetRequest()), false);
-    request(state, queue);
+    request(state);
   }
 
 }

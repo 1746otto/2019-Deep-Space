@@ -23,8 +23,8 @@ public class Ports {
   public static final int BALL_LEFT = 42;
   public static final int BALL_RIGHT = 41;
 
-  public static final int SUCK_LEFT = 50;
-  public static final int SUCK_RIGHT = 51;
+  public static final int SUCK_LEFT = 51;
+  public static final int SUCK_RIGHT = 50;
   public static final int LIFT_RIGHT = 60;
   public static final int LIFT_LEFT = 61;
 

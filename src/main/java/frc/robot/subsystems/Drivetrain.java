@@ -118,6 +118,14 @@ public class Drivetrain extends Subsystem {
     }
   }
 
+  public void setVisionSteer(Translation2d driveInput) {
+    setState(ControlState.VISION);
+    periodicIO.controlMode = ControlMode.PercentOutput;
+    
+    periodicIO.rightDemand = (driveInput.y() / 10 * 9) - driveInput.x();
+    periodicIO.leftDemand = (driveInput.y() / 10 * 9) + driveInput.x();
+  }
+
   public Request openLoopRequest(Translation2d driveInput) {
     return new Request(){
     

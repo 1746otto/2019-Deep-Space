@@ -17,11 +17,13 @@ import frc.robot.io.Xbox;
 import frc.robot.lib.team254.geometry.Translation2d;
 import frc.robot.loops.Looper;
 import frc.robot.subsystems.CargoIntake;
+import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.HatchScorer;
 import frc.robot.subsystems.Lift;
 import frc.robot.subsystems.SubsystemManager;
 import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.vision.LimelightProcessor;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -35,6 +37,9 @@ public class Robot extends TimedRobot {
   private Lift lift;
   private HatchScorer hatchScorer;
   private CargoIntake cargoIntake;
+  private Climber climber;
+  private LimelightProcessor limelightProcessor;
+
   private Superstructure s;
   private SubsystemManager subsystems;
 
@@ -44,6 +49,7 @@ public class Robot extends TimedRobot {
   private DriverStation ds = DriverStation.getInstance();
 
   private Xbox driver;
+  private Xbox coDriver;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -56,10 +62,18 @@ public class Robot extends TimedRobot {
     hatchScorer = HatchScorer.getInstance();
     driveTrain = Drivetrain.getInstance();
     lift = Lift.getInstance();
-    subsystems = new SubsystemManager(Arrays.asList(s, cargoIntake, hatchScorer, driveTrain, lift));
+    climber = Climber.getInstance();
+    limelightProcessor = LimelightProcessor.getInstance();
+
+    subsystems = new SubsystemManager(Arrays.asList(s, cargoIntake, hatchScorer, 
+        driveTrain, lift, climber));
 
     driver = new Xbox(0);
+    coDriver = new Xbox(1);
     driver.setDeadband(0.2);
+    coDriver.setDeadband(0.1);
+
+    enabledLooper.register(limelightProcessor);
 
     subsystems.registerEnabledLoops(enabledLooper);
     subsystems.registerDisabledLooper(disabledLooper);
@@ -72,7 +86,6 @@ public class Robot extends TimedRobot {
   }
 
   public void teleopConfig() {
-    lift.setCurrentLimit(Constants.kLiftCurrentLimit + 5);
     lift.configForTeleopSpeed();
   }
 
@@ -192,32 +205,40 @@ public class Robot extends TimedRobot {
 
     driveTrain.setOpenLoop(new Translation2d(driveXInput, driveYInput));
 
-    double liftInput = driver.getY(Hand.kRight);
+    double liftInput = -driver.getY(Hand.kRight);
 
     if (Math.abs(liftInput) != 0) {
-      lift.setOpenLoop(-liftInput);
+      lift.setOpenLoop(liftInput);
     } else if (lift.isOpenLoop()) {
       lift.lockHeight();
     }
+
+    double climbInput = -coDriver.getY(Hand.kLeft);
+
+    climber.setOpenLoop(climbInput);
 
     if (driver.aButton.wasActivated()) {
       s.resetLiftState();
     } else if (driver.xButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
-        lift.setTargetHeight(Constants.kHighLevelCargoHeight);
+        lift.setTargetHeight(Constants.kLowLevelCargoHeight);
       } else {
-        lift.setTargetHeight(Constants.kHighLevelHatchRocketHeight);
+        lift.setTargetHeight(Constants.kMidLevelHatchRocketHeight);
       }
     } else if (driver.yButton.wasActivated()) {
       if (cargoIntake.getCargoSensor()) {
         lift.setTargetHeight(Constants.kMidLevelCargoHeight);
       } else {
-        lift.setTargetHeight(Constants.kMidLevelHatchRocketHeight);
+        lift.setTargetHeight(Constants.kHighLevelHatchRocketHeight);
       }
     } else if (driver.POV0.wasActivated()) {
       lift.setTargetHeight(Constants.kCargoShipHeight);
-    } else if (driver.bButton.wasActivated()) {
-      lift.setTargetHeight(Constants.kLowLevelCargoHeight);
+    } else if (driver.POV180.wasActivated()) {
+      lift.setTargetHeight(Constants.kHighLevelCargoHeight);
+    }
+
+    if (driver.bButton.isBeingPressed()) {
+      driveTrain.setVisionSteer(new Translation2d(limelightProcessor.generateSteer(), driveYInput));
     }
 
     if (driver.backButton.wasActivated()) {
@@ -236,8 +257,13 @@ public class Robot extends TimedRobot {
       hatchScorer.toggleStowState();
     }
 
+    if (coDriver.bButton.wasActivated()) {
+      climber.toggleVaccum();
+    }
+
+    limelightProcessor.toggleCamMode(driver.bButton.isBeingPressed());
+
     cargoIntake.setIntakeSpeed(driver.getTriggerAxis(Hand.kRight) 
         - driver.getTriggerAxis(Hand.kLeft));
-
   }
 }

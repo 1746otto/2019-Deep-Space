@@ -1,14 +1,12 @@
 package frc.robot.subsystems;
 
-import java.util.Arrays;
-import java.util.List;
 import com.ctre.phoenix.motorcontrol.ControlMode;
-import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
-import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
+
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 import frc.robot.Constants;
 import frc.robot.Ports;
 import frc.robot.loops.ILooper;
@@ -17,6 +15,10 @@ import frc.robot.subsystems.requests.Prerequisite;
 import frc.robot.subsystems.requests.Request;
 import frc.robot.util.LazyTalonSRX;
 import frc.robot.util.Util;
+
+import java.util.Arrays;
+import java.util.List;
+
 
 public class Lift extends Subsystem {
   private static Lift instance = null;
@@ -83,12 +85,6 @@ public class Lift extends Subsystem {
       motor.setNeutralMode(NeutralMode.Brake);
     }
     
-    master.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder, 0, 10);
-    master.setStatusFramePeriod(StatusFrameEnhanced.Status_13_Base_PIDF0, 10);
-    // master.configForwardSoftLimitEnable(true, 10);
-    // master.configReverseSoftLimitEnable(true, 10);
-    // enableLimits(false);
-
     setCurrentLimit(Constants.kLiftCurrentLimit);
 
     resetToAbsolutePosition();
@@ -98,18 +94,18 @@ public class Lift extends Subsystem {
   private void configForAscent() {
     manualSpeed = Constants.kLiftTeleopManualSpeed;
 
-    master.config_kP(0, 0.50, 10);
+    master.config_kP(0, 0.85, 10);
     master.config_kI(0, 0.0, 10);
     master.config_kD(0, 5, 10);
     master.config_kF(0, 1023.0 / Constants.kLiftMaxSpeedHighGear, 10);
 
-    master.config_kP(1, 0.50, 10);
+    master.config_kP(1, 0.85, 10);
     master.config_kI(1, 0.0, 10);
     master.config_kD(1, 5, 10);
     master.config_kF(1, 1023.0 / Constants.kLiftMaxSpeedHighGear, 10);
 
-    master.configMotionCruiseVelocity((int)(300 * 1.0), 10);
-    master.configMotionAcceleration((int)(300 * 3.0), 10);
+    master.configMotionCruiseVelocity((int)(Constants.kLiftMaxSpeedHighGear * 1.0), 10);
+    master.configMotionAcceleration((int)(Constants.kLiftMaxSpeedHighGear * 3.0), 10);
     master.configMotionSCurveStrength(0);
 
     configForAscent = true;
@@ -215,16 +211,15 @@ public class Lift extends Subsystem {
     
       @Override
       public void act() {
-        setOpenLoop(-0.3);
+        setOpenLoop(-0.55);
       }
 
       @Override
       public boolean isFinished() {
-        if (Util.epsilonEquals(master.getOutputCurrent(), Constants.kLiftCurrentLimit) 
-            || master.getOutputCurrent() > Constants.kLiftCurrentLimit) {
-              resetToAbsolutePosition();
-              return true;
-            }
+        if (master.getOutputCurrent() > (Constants.kLiftCurrentLimit - 0.5)) {
+          resetToAbsolutePosition();
+          return true;
+        }
         return false;
       }
     };
@@ -338,12 +333,12 @@ public class Lift extends Subsystem {
       SmartDashboard.putNumber("Elevator 2 Voltage", slave.getMotorOutputVoltage());
       SmartDashboard.putNumber("Elevator 1 Current", periodicIO.current);
       SmartDashboard.putNumber("Elevator Pulse Width Position",
-          master.getSensorCollection().getAnalogIn());
+          master.getSensorCollection().getPulseWidthPosition());
       SmartDashboard.putNumber("Elevator Encoder", periodicIO.position);
       SmartDashboard.putNumber("Elevator Velocity", periodicIO.velocity);
       SmartDashboard.putNumber("Elevator Error", master.getClosedLoopError(0));
       if (master.getControlMode() == ControlMode.MotionMagic) {
-        SmartDashboard.putNumber("Elevator Desired Setpoint", targetHeight);
+        SmartDashboard.putNumber("Elevator Desired Setpoint", getTargetHeight());
         SmartDashboard.putNumber("Elevator Setpoint", master.getClosedLoopTarget());
       }
     }
@@ -362,8 +357,8 @@ public class Lift extends Subsystem {
   }
 
   public double encTicksToElevatorHeight(double encTicks) {
-    return (encTickToInches(encTicks) + Constants.kElevatorInitialHeight) 
-      * Constants.kCascadingFactor;
+    return (encTickToInches(encTicks * Constants.kCascadingFactor) 
+        + Constants.kElevatorInitialHeight);
   }
 
   public double elevatorHeightToEncTicks(double elevatorHeight) {
