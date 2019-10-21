@@ -156,7 +156,7 @@ public class Superstructure extends Subsystem {
       double liftHeight = lift.getHeight();
 
       synchronized (Superstructure.this) {
-        if (!allRequestsCompleted) {
+        if (!activeRequestsCompleted) {
           if (newRequests) {
             if (activeRequests.isParallel()) {
               boolean allActivated = true;
@@ -233,10 +233,6 @@ public class Superstructure extends Subsystem {
     } else {
       compressor.set(Value.kOff);
     }
-  }
-
-  public void enableCompressor() {
-
   }
 
   public boolean getCompressorState() {
@@ -320,6 +316,7 @@ public class Superstructure extends Subsystem {
 
   public void resetLiftState() {
     RequestList state = new RequestList(Arrays.asList(
+        lift.heightRequest(8.0),
         lift.resetRequest()), false);
     request(state);
   }

@@ -8,6 +8,10 @@
 package frc.robot;
 
 import java.util.Arrays;
+import java.util.Date;
+import java.util.UUID;
+
+import badlog.lib.BadLog;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
@@ -47,6 +51,7 @@ public class Robot extends TimedRobot {
   private Looper disabledLooper = new Looper();
 
   private DriverStation ds = DriverStation.getInstance();
+  private BadLog log;
 
   private Xbox driver;
   private Xbox coDriver;
@@ -57,6 +62,11 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    log = BadLog.init("/home/lvuser/badlog/" + 
+        (Constants.kIsUsingCompBot ? ds.getMatchNumber() : new Date().toLocaleString()) + ".bag");
+    BadLog.createValue("Start Time", new Date().toString());
+    BadLog.createValue("Match Number", "" +  ds.getMatchNumber());
+
     s = Superstructure.getInstance();
     cargoIntake = CargoIntake.getInstance();
     hatchScorer = HatchScorer.getInstance();
@@ -64,7 +74,7 @@ public class Robot extends TimedRobot {
     lift = Lift.getInstance();
     climber = Climber.getInstance();
     limelightProcessor = LimelightProcessor.getInstance();
-
+    
     subsystems = new SubsystemManager(Arrays.asList(s, cargoIntake, hatchScorer, 
         driveTrain, lift, climber));
 
@@ -77,11 +87,17 @@ public class Robot extends TimedRobot {
 
     subsystems.registerEnabledLoops(enabledLooper);
     subsystems.registerDisabledLooper(disabledLooper);
+
+    log.finishInitialization();
   }
 
   public void allPeriodic() {
-    subsystems.outputToSmartDashboard();
-    enabledLooper.outputToSmartDashboard();
+    subsystems.outputTelemetery();
+    enabledLooper.outputTelemetry();
+    if (ds.isEnabled()) {
+      log.updateTopics();
+      log.log();
+    }    
     SmartDashboard.putBoolean("Enabled", ds.isEnabled());
   }
 
@@ -156,6 +172,7 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     try {
       driver.update();
+      coDriver.update();
       twoControllerMode();
       allPeriodic();
     } catch (Throwable t) {
@@ -217,6 +234,10 @@ public class Robot extends TimedRobot {
 
     climber.setOpenLoop(climbInput);
 
+    if (coDriver.bButton.wasActivated()) {
+      climber.toggleVaccum();
+    }
+
     if (driver.aButton.wasActivated()) {
       s.resetLiftState();
     } else if (driver.xButton.wasActivated()) {
@@ -257,13 +278,10 @@ public class Robot extends TimedRobot {
       hatchScorer.toggleStowState();
     }
 
-    if (coDriver.bButton.wasActivated()) {
-      climber.toggleVaccum();
-    }
 
     limelightProcessor.toggleCamMode(driver.bButton.isBeingPressed());
 
-    cargoIntake.setIntakeSpeed(driver.getTriggerAxis(Hand.kRight) 
-        - driver.getTriggerAxis(Hand.kLeft));
+    cargoIntake.setIntakeSpeed(driver.getTriggerAxis(Hand.kLeft) 
+        - driver.getTriggerAxis(Hand.kRight));
   }
 }

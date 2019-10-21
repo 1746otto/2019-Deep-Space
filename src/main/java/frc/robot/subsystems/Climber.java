@@ -9,17 +9,18 @@ import frc.robot.util.LazyVictorSPX;
 public class Climber extends Subsystem {
   private static Climber instance;
 
-  private LazyTalonSRX rightVacc;
-  private LazyVictorSPX leftVacc;
+  private LazyVictorSPX rightVacc;
+  private LazyTalonSRX leftVacc;
 
   private LazyTalonSRX rightLift;
   private LazyVictorSPX leftLift;
 
-  private ControlState state = ControlState.VACCOFF;
-
   private enum ControlState {
     VACCOFF, VACCON, SUCCED 
   }
+
+  private ControlState state = ControlState.VACCOFF;
+
 
   private ControlState getState() {
     return state;
@@ -39,13 +40,13 @@ public class Climber extends Subsystem {
   }
 
   private Climber() {
-    rightVacc = new LazyTalonSRX(Ports.SUCK_RIGHT);
-    leftVacc = new LazyVictorSPX(Ports.SUCK_LEFT);
+    rightVacc = new LazyVictorSPX(Ports.SUCK_RIGHT);
+    leftVacc = new LazyTalonSRX(Ports.SUCK_LEFT);
 
     rightLift = new LazyTalonSRX(Ports.LIFT_RIGHT);
     leftLift = new LazyVictorSPX(Ports.LIFT_LEFT);
 
-    leftVacc.follow(rightVacc);
+    rightVacc.follow(leftVacc);
     leftLift.follow(rightLift);
   }
 
@@ -57,16 +58,16 @@ public class Climber extends Subsystem {
   public void toggleVaccum() {
     if (getState() == ControlState.VACCOFF) {
       setState(ControlState.VACCON);
-      rightVacc.set(ControlMode.PercentOutput, 1);
+      leftVacc.set(ControlMode.PercentOutput, 1);
     } else {
       setState(ControlState.VACCOFF);
-      rightVacc.set(ControlMode.PercentOutput, 0);
+      leftVacc.set(ControlMode.PercentOutput, 0);
     }
   }
 
   @Override
   public void stop() {
-    periodicIO.climbInput = 0;
+    rightLift.set(ControlMode.PercentOutput, 0);
   }
 
   @Override

@@ -84,7 +84,7 @@ public class Looper implements ILooper {
     }
   }
 
-  public void outputToSmartDashboard() {
+  public void outputTelemetry() {
     SmartDashboard.putNumber("looperDt", dt());
   }
   

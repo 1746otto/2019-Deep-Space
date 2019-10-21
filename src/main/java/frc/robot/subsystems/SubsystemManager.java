@@ -22,10 +22,10 @@ public class SubsystemManager implements ILooper {
     mAllSubsystems = subsystems;
   }
 
-  public void outputToSmartDashboard() {
+  public void outputTelemetery() {
     mAllSubsystems.forEach(s -> s.outputTelemetery());
   }
-
+  
   public void stop() {
     mAllSubsystems.forEach(s -> s.stop());
   }

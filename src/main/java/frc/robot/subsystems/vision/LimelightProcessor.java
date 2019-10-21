@@ -14,9 +14,9 @@ public class LimelightProcessor implements Loop {
   private double txError;
   private double deltaTxError;
 
-  private double steerP = 0.07;
+  private double steerP = 0.06;
   private double steerD = 0.2;
-  private double steerF = 0.1;
+  private double steerF = 0.4;
 
   public static LimelightProcessor getInstance() {
     if (instance == null) {
@@ -52,13 +52,15 @@ public class LimelightProcessor implements Loop {
   }
 
   public double generateSteer() {
-    txError = horzOffset * steerF;
+    txError = (horzOffset + 0.5) * steerF;
     if (txError != prevTxError) {
       deltaTxError = txError - prevTxError;
     }
     if (!validTarget) {
+      prevTxError = 0; 
       return 0.0;
     } else {
+      prevTxError = txError;
       return (txError * steerP) + (deltaTxError * steerD);
     }
   }

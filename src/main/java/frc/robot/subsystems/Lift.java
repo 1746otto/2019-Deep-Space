@@ -3,6 +3,9 @@ package frc.robot.subsystems;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 
+import badlog.lib.BadLog;
+import badlog.lib.DataInferMode;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -34,6 +37,8 @@ public class Lift extends Subsystem {
   LazyTalonSRX slave;
   List<LazyTalonSRX> motors;
   List<LazyTalonSRX> slaves;
+
+  private DigitalInput liftSensor;
   
   private double targetHeight = 0.0;
 
@@ -73,6 +78,7 @@ public class Lift extends Subsystem {
   private Lift() {
     master = new LazyTalonSRX(Ports.ELEVATOR_TALON);
     slave = new LazyTalonSRX(Ports.ELEVATOR_VICTOR);
+    liftSensor = new DigitalInput(Ports.LIFT_BOTTOM);
 
     motors = Arrays.asList(master, slave);
     slaves = Arrays.asList(slave);
@@ -89,6 +95,9 @@ public class Lift extends Subsystem {
 
     resetToAbsolutePosition();
     configForAscent();
+
+    BadLog.createTopic("Lift/Lifter Current", "A", () -> master.getOutputCurrent());
+    BadLog.createTopic("Lift/Lift Position", "ticks", () -> (double) master.getSelectedSensorPosition(0));
   }
 
   private void configForAscent() {
@@ -104,8 +113,8 @@ public class Lift extends Subsystem {
     master.config_kD(1, 5, 10);
     master.config_kF(1, 1023.0 / Constants.kLiftMaxSpeedHighGear, 10);
 
-    master.configMotionCruiseVelocity((int)(Constants.kLiftMaxSpeedHighGear * 1.0), 10);
-    master.configMotionAcceleration((int)(Constants.kLiftMaxSpeedHighGear * 3.0), 10);
+    master.configMotionCruiseVelocity((int)(500 * 1.0), 10);
+    master.configMotionAcceleration((int)(2000 * 3.0), 10);
     master.configMotionSCurveStrength(0);
 
     configForAscent = true;
@@ -113,6 +122,9 @@ public class Lift extends Subsystem {
 
   private void configForDescent() {
     master.configMotionSCurveStrength(4);
+
+    master.configMotionCruiseVelocity((int)(250 * 1.0), 10);
+    master.configMotionAcceleration((int)(700 * 1.0), 10);
 
     configForAscent = false;
   }
@@ -211,12 +223,13 @@ public class Lift extends Subsystem {
     
       @Override
       public void act() {
-        setOpenLoop(-0.55);
+        setOpenLoop(0);
       }
 
       @Override
       public boolean isFinished() {
-        if (master.getOutputCurrent() > (Constants.kLiftCurrentLimit - 0.5)) {
+        if (!liftSensor.get()) {
+          setOpenLoop(0.0);
           resetToAbsolutePosition();
           return true;
         }
@@ -270,7 +283,7 @@ public class Lift extends Subsystem {
   
     @Override
     public void onStart(double timestamp) {
-    
+
     }
   
     @Override
@@ -326,6 +339,7 @@ public class Lift extends Subsystem {
 
   @Override
   public void outputTelemetery() {
+    // SmartDashboard Telemetry
     SmartDashboard.putNumber("Elevator Height", getHeight());
 
     if (Constants.kDebuggingOutput) {

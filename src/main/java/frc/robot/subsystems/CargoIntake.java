@@ -33,6 +33,8 @@ public class CargoIntake extends Subsystem {
 
   private Lift lift;
 
+  private PeriodicIO periodicIO = new PeriodicIO();
+
   public static CargoIntake getInstance() {
     if (instance == null) {
       instance = new CargoIntake();
@@ -84,7 +86,7 @@ public class CargoIntake extends Subsystem {
   }
 
   public boolean getCargoSensor() {
-    return cargoSensor.get();
+    return !cargoSensor.get();
   }
 
   public void setIntakeState(IntakeState state) {
@@ -124,6 +126,7 @@ public class CargoIntake extends Subsystem {
       setIntakeState(IntakeState.NEUTRAL);
       motors.forEach(m -> m.set(ControlMode.PercentOutput, 0.0));
     }
+    periodicIO.intakeInput = output;
     motors.forEach(m -> m.set(ControlMode.PercentOutput, output));
   }
 
@@ -144,14 +147,15 @@ public class CargoIntake extends Subsystem {
   
     @Override
     public void onLoop(double timestamp) {
-      if (lift.getHeight() >= Constants.kLowLevelCargoHeight) {
+      if (Util.epsilonEquals(lift.getHeight(), (Constants.kLowLevelCargoHeight - 7)) 
+          || lift.getHeight() > (Constants.kLowLevelCargoHeight - 7)) {
         setBumperState(BumperState.RETRACTED);
       }
-      if (cargoSensor.get()) {
+      if (!cargoSensor.get() && periodicIO.intakeInput == 0.0) {
         setIntakeState(IntakeState.HOLDING);
-      } else {
-        intakeMotors.forEach(s -> s.set(ControlMode.PercentOutput, 0.07));
-      }    
+        intakeMotors.forEach(s -> s.set(ControlMode.PercentOutput, 0.08));
+      }
+
     }
   
     @Override
@@ -191,6 +195,10 @@ public class CargoIntake extends Subsystem {
       SmartDashboard.putString("Over the Bumper State", getBumperState().toString());
       SmartDashboard.putString("Cargo Intake State", getIntakeState().toString());
     }
+  }
+
+  private static class PeriodicIO {
+    public double intakeInput;
   }
 
   
